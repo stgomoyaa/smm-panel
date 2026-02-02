@@ -16,10 +16,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Obtener servicio
+    // Obtener servicio completo con relaciones
     const service = await prisma.service.findUnique({
       where: { serviceId },
       include: {
+        category: true,
+        subcategory: true,
         provider: true,
       },
     })
@@ -31,34 +33,58 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validar cantidad
-    const orderQuantity = quantity || service.quantity
-    if (orderQuantity < service.min || orderQuantity > service.max) {
+    // Obtener usuario admin o sistema para órdenes públicas
+    const systemUser = await prisma.user.findFirst({
+      where: { role: 'admin' },
+    })
+
+    if (!systemUser) {
       return NextResponse.json(
-        { error: `La cantidad debe estar entre ${service.min} y ${service.max}` },
-        { status: 400 }
+        { error: 'Sistema no configurado correctamente' },
+        { status: 500 }
       )
     }
+
+    // Usar la cantidad del servicio (es fija)
+    const orderQuantity = service.quantity
+
+    // Calcular comisiones y ganancias
+    const salePrice = service.salePrice
+    const providerCostUSD = service.apiProviderPrice
+    const commissionRate = 0 // Sin comisión para órdenes públicas
+    const commission = 0
+    
+    // Convertir USD a CLP (usar tipo de cambio fijo o API)
+    const usdToClp = 950
+    const providerCostCLP = providerCostUSD * usdToClp
+    
+    const profit = salePrice - providerCostCLP - commission
 
     // Crear orden local
     const order = await prisma.order.create({
       data: {
         orderId: generateOrderId(),
-        email,
+        sellerId: systemUser.id,
+        customerName: email,
+        customerContact: email,
         serviceId: service.id,
+        categoryName: service.category.name,
+        subcategoryName: service.subcategory?.name || 'General',
         serviceName: service.name,
-        serviceType: service.serviceType,
+        quantity: orderQuantity,
+        link,
+        salePrice,
+        providerCost: providerCostUSD,
+        commission,
+        profit,
         apiProviderId: service.apiProviderId,
         apiServiceId: service.apiServiceId,
-        link,
-        quantity: orderQuantity,
-        charge: service.price,
         status: 'awaiting',
       },
     })
 
-    // Si el servicio es automático (API), intentar enviar inmediatamente
-    if (service.addType === 'api' && service.provider) {
+    // Intentar enviar al proveedor inmediatamente
+    if (service.provider) {
       try {
         const apiClient = new SMMApiClient({
           url: service.provider.url,
@@ -66,7 +92,7 @@ export async function POST(request: Request) {
         })
 
         const response = await apiClient.createOrder({
-          service: service.apiServiceId!,
+          service: service.apiServiceId,
           link,
           quantity: orderQuantity,
         })

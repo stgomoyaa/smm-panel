@@ -8,11 +8,12 @@ import { getOrderStatusDisplay, formatDate } from '@/lib/utils'
 interface Order {
   id: number
   orderId: string
-  email: string
+  customerName: string | null
+  customerContact: string | null
   serviceName: string
   link: string
   quantity: number
-  charge: number
+  salePrice: number
   status: string
   statusApi?: string
   remains?: number
@@ -149,7 +150,7 @@ export default function OrdersPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-gray-300">
-                          {order.email}
+                          {order.customerContact || order.customerName || 'N/A'}
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-white">{order.serviceName}</div>
@@ -172,7 +173,7 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-white font-bold">
-                            ${order.charge}
+                            ${order.salePrice}
                           </div>
                         </td>
                         <td className="px-6 py-4">

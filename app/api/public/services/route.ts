@@ -22,18 +22,12 @@ export async function GET(request: Request) {
         id: true,
         serviceId: true,
         name: true,
-        description: true,
-        price: true,
-        originalPrice: true,
-        discountValue: true,
         quantity: true,
-        min: true,
-        max: true,
-        averageTime: true,
-        refillEnabled: true,
-        serviceType: true,
+        salePrice: true,
+        categoryId: true,
+        subcategoryId: true,
       },
-      orderBy: { name: 'asc' },
+      orderBy: { sort: 'asc' },
     })
 
     return NextResponse.json(services)

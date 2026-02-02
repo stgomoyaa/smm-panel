@@ -30,7 +30,7 @@ export async function GET(
       serviceName: order.serviceName,
       link: order.link,
       quantity: order.quantity,
-      charge: order.charge,
+      charge: order.salePrice,
       status: order.status,
       statusApi: order.statusApi,
       startCounter: order.startCounter,

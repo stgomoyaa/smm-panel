@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 interface Category {
   id: number
   name: string
+  icon?: string | null
   subcategories: Subcategory[]
 }
 

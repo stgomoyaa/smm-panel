@@ -73,7 +73,7 @@ export async function POST(request: Request) {
         customerContact: customerContact || null,
         serviceId: service.id,
         categoryName: service.category.name,
-        subcategoryName: service.subcategory.name,
+        subcategoryName: service.subcategory?.name || 'General',
         serviceName: service.name,
         quantity: service.quantity,
         link,

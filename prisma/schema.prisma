@@ -67,7 +67,7 @@ model Service {
   id                 Int         @id @default(autoincrement())
   serviceId          String      @unique @map("service_id") // ID público (sf123456)
   categoryId         Int         @map("category_id")
-  subcategoryId      Int         @map("subcategory_id")
+  subcategoryId      Int?        @map("subcategory_id") // Opcional para servicios sin configurar
   name               String      // Ej: "1000 Seguidores Instagram"
   quantity           Int         // Cantidad fija: 1000, 2000, 3000, etc.
   salePrice          Float       @map("sale_price") // Precio de VENTA (ej: 5990)
@@ -80,7 +80,7 @@ model Service {
   updatedAt          DateTime    @updatedAt @map("updated_at")
 
   category     Category     @relation(fields: [categoryId], references: [id])
-  subcategory  Subcategory  @relation(fields: [subcategoryId], references: [id])
+  subcategory  Subcategory? @relation(fields: [subcategoryId], references: [id])
   provider     ApiProvider  @relation(fields: [apiProviderId], references: [id])
   orders       Order[]
 

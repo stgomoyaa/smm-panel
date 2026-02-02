@@ -67,6 +67,9 @@ export async function POST(
         const serviceData = {
           name: smmService.name,
           categoryId,
+          subcategoryId: null, // El sync automático no asigna subcategoría
+          quantity: 0, // Valor por defecto
+          salePrice: parseFloat(smmService.rate) * 1.5, // 50% de margen por defecto
           price: parseFloat(smmService.rate),
           originalPrice: parseFloat(smmService.rate),
           min: parseInt(smmService.min),

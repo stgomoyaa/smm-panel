@@ -17,7 +17,6 @@ export async function GET(request: Request) {
       where: {
         status: 'awaiting',
         apiOrderId: null,
-        apiProviderId: { not: null },
       },
       include: {
         service: {

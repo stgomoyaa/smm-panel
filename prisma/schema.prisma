@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Proveedores SMM (1xPanel, CostPanel, etc.)
+model ApiProvider {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  apiKey    String   @map("api_key")
+  type      String   @default("default") // default, custom
+  balance   Float    @default(0)
+  currency  String   @default("USD")
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  services Service[]
+
+  @@map("api_providers")
+}
+
+// Categorías principales (Instagram, TikTok, Facebook, etc.)
+model Category {
+  id            Int           @id @default(autoincrement())
+  name          String
+  slug          String        @unique
+  icon          String?
+  sort          Int           @default(0)
+  status        Boolean       @default(true)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  subcategories Subcategory[]
+  services      Service[]
+
+  @@map("categories")
+}
+
+// Subcategorías (seguidores, likes, views, etc.)
+model Subcategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String
+  categoryId Int     @map("category_id")
+  sort      Int      @default(0)
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  services Service[]
+
+  @@map("subcategories")
+}
+
+// Servicios con cantidades específicas
+model Service {
+  id                 Int         @id @default(autoincrement())
+  serviceId          String      @unique @map("service_id") // ID público (sf123456)
+  categoryId         Int         @map("category_id")
+  subcategoryId      Int         @map("subcategory_id")
+  name               String      // Ej: "1000 Seguidores Instagram"
+  quantity           Int         // Cantidad fija: 1000, 2000, 3000, etc.
+  salePrice          Float       @map("sale_price") // Precio de VENTA (ej: 5990)
+  apiProviderId      Int         @map("api_provider_id")
+  apiServiceId       String      @map("api_service_id") // ID en el proveedor
+  apiProviderPrice   Float       @map("api_provider_price") // Costo real del proveedor
+  sort               Int         @default(0)
+  status             Boolean     @default(true)
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  category     Category     @relation(fields: [categoryId], references: [id])
+  subcategory  Subcategory  @relation(fields: [subcategoryId], references: [id])
+  provider     ApiProvider  @relation(fields: [apiProviderId], references: [id])
+  orders       Order[]
+
+  @@map("services")
+}
+
+// Órdenes/Ventas registradas por vendedores
+model Order {
+  id              Int       @id @default(autoincrement())
+  orderId         String    @unique @map("order_id") // ID público
+  sellerId        Int       @map("seller_id") // Vendedor que registró la venta
+  customerName    String?   @map("customer_name") // Nombre del cliente final (opcional)
+  customerContact String?   @map("customer_contact") // Email/teléfono del cliente (opcional)
+  serviceId       Int       @map("service_id")
+  categoryName    String    @map("category_name") // Snapshot
+  subcategoryName String    @map("subcategory_name") // Snapshot
+  serviceName     String    @map("service_name") // Snapshot
+  quantity        Int       // Cantidad
+  link            String    // Link de Instagram/TikTok/etc donde se aplica
+  salePrice       Float     @map("sale_price") // Precio de venta
+  providerCost    Float     @map("provider_cost") // Costo del proveedor en USD
+  commission      Float     // Comisión del vendedor (20% de salePrice)
+  profit          Float     // Ganancia neta (salePrice - providerCost - commission)
+  apiProviderId   Int       @map("api_provider_id")
+  apiServiceId    String    @map("api_service_id")
+  apiOrderId      String?   @map("api_order_id") // ID en el proveedor
+  status          String    @default("awaiting") // awaiting, pending, processing, completed, error, manual
+  statusApi       String?   @map("status_api") // Estado del proveedor
+  startCounter    Int?      @default(0) @map("start_counter")
+  remains         Int?      @map("remains")
+  note            String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  seller  User    @relation(fields: [sellerId], references: [id])
+  service Service @relation(fields: [serviceId], references: [id])
+
+  @@map("orders")
+}
+
+// Usuarios (admin y vendedores)
+model User {
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  password        String
+  name            String
+  role            String   @default("seller") // admin, seller
+  commissionRate  Float    @default(20) @map("commission_rate") // % de comisión
+  status          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("users")
+}

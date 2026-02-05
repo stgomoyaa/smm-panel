@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // Solo devolver cantidad y precio de venta (NO el costo del proveedor)
+    // Devolver cantidad, precio de venta y costo proveedor (para calcular comisión)
     const services = await prisma.service.findMany({
       where: {
         subcategoryId: parseInt(subcategoryId),
@@ -31,8 +31,8 @@ export async function GET(request: Request) {
         serviceId: true,
         name: true,
         quantity: true,
-        salePrice: true, // Solo precio de venta
-        // NO incluir apiProviderPrice, apiServiceId, etc.
+        salePrice: true,
+        apiProviderPrice: true, // Para calcular comisión
       },
       orderBy: { quantity: 'asc' },
     })

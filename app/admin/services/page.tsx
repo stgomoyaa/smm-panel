@@ -49,12 +49,30 @@ export default function ServicesPage() {
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
+  const [usdToClpRate, setUsdToClpRate] = useState(950) // Fallback rate
 
   useEffect(() => {
     fetchServices()
     fetchCategories()
     fetchProviders()
+    fetchExchangeRate()
   }, [selectedCategory])
+
+  const fetchExchangeRate = async () => {
+    try {
+      const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json')
+      if (res.ok) {
+        const data = await res.json()
+        const rate = data.usd.clp
+        if (rate) {
+          setUsdToClpRate(rate)
+          console.log('💱 Tasa de cambio actualizada:', rate)
+        }
+      }
+    } catch (error) {
+      console.error('Error obteniendo tasa de cambio:', error)
+    }
+  }
 
   const fetchCategories = async () => {
     try {
@@ -172,6 +190,9 @@ export default function ServicesPage() {
       let errorCount = 0
       const errors: string[] = []
 
+      // Obtener servicios del proveedor para calcular costos
+      const providerServicesCache: { [key: number]: any[] } = {}
+      
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim()
         if (!line) continue
@@ -202,15 +223,40 @@ export default function ServicesPage() {
           continue
         }
 
+        const finalProviderId = providerId ? parseInt(providerId) : providers[0]?.id
+        
+        // Obtener servicios del proveedor (cacheado)
+        if (!providerServicesCache[finalProviderId]) {
+          try {
+            const res = await fetch(`/api/admin/providers/${finalProviderId}/services`)
+            if (res.ok) {
+              providerServicesCache[finalProviderId] = await res.json()
+            } else {
+              providerServicesCache[finalProviderId] = []
+            }
+          } catch (error) {
+            providerServicesCache[finalProviderId] = []
+          }
+        }
+
+        // Buscar el costo del servicio en la API del proveedor
+        const providerService = providerServicesCache[finalProviderId].find(
+          (s: any) => String(s.service) === String(apiServiceId)
+        )
+        
+        const apiProviderPrice = providerService ? parseFloat(providerService.rate) : 0
+        
+        console.log(`💰 Servicio ${apiServiceId}: Costo USD $${apiProviderPrice}`)
+
         const serviceData = {
           name: name || `${quantity} unidades`,
-          categoryId: categories[0]?.id, // Usar primera categoría por defecto
+          categoryId: categories[0]?.id,
           subcategoryId: subcategoryId ? parseInt(subcategoryId) : null,
           quantity: parseInt(quantity),
           salePrice: parseFloat(salePrice),
-          apiProviderId: providerId ? parseInt(providerId) : providers[0]?.id,
+          apiProviderId: finalProviderId,
           apiServiceId,
-          apiProviderPrice: 0,
+          apiProviderPrice,
         }
 
         const res = await fetch('/api/admin/services', {
@@ -299,80 +345,97 @@ export default function ServicesPage() {
             <table className="w-full">
               <thead className="bg-dark-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Servicio
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Categoría
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Proveedor
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Cantidad
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                    Precio
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                    Precio / Costo
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                    Margen
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Estado
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-4 py-4 text-right text-xs font-medium text-gray-400 uppercase">
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-700">
-                {services.map((service) => (
-                  <tr key={service.id} className="hover:bg-dark-700 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="text-white font-medium">{service.name}</div>
-                      <div className="text-xs text-gray-500">{service.serviceId}</div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      {service.category.name}
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      {service.provider?.name || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      {service.quantity.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-white font-bold">${service.salePrice.toLocaleString()} CLP</div>
-                      <div className="text-xs text-gray-500">
-                        Costo: ${Math.round(service.apiProviderPrice * 950).toLocaleString()} CLP
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          service.status
-                            ? 'bg-green-900 text-green-300'
-                            : 'bg-red-900 text-red-300'
-                        }`}
-                      >
-                        {service.status ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => setEditingService(service)}
-                          className="p-2 text-blue-400 hover:bg-dark-600 rounded-lg transition-colors"
+                {services.map((service) => {
+                  const costClp = Math.round(service.apiProviderPrice * usdToClpRate)
+                  const margin = service.salePrice - costClp
+                  const marginPercent = costClp > 0 ? ((margin / costClp) * 100).toFixed(0) : 0
+                  
+                  return (
+                    <tr key={service.id} className="hover:bg-dark-700 transition-colors">
+                      <td className="px-4 py-4">
+                        <div className="text-white font-medium text-sm">{service.name}</div>
+                        <div className="text-xs text-gray-500">{service.serviceId}</div>
+                      </td>
+                      <td className="px-4 py-4 text-gray-300 text-sm">
+                        {service.category.name}
+                      </td>
+                      <td className="px-4 py-4 text-gray-300 text-sm">
+                        {service.provider?.name || '-'}
+                      </td>
+                      <td className="px-4 py-4 text-gray-300 text-sm">
+                        {service.quantity.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-white font-bold text-sm">${service.salePrice.toLocaleString()} CLP</div>
+                        <div className="text-xs text-gray-500">
+                          Costo: ${costClp.toLocaleString()} CLP
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className={`text-sm font-semibold ${margin > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ${margin.toLocaleString()} CLP
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {marginPercent}% ganancia
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            service.status
+                              ? 'bg-green-900 text-green-300'
+                              : 'bg-red-900 text-red-300'
+                          }`}
                         >
-                          <FiEdit2 />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteService(service.id)}
-                          className="p-2 text-red-400 hover:bg-dark-600 rounded-lg transition-colors"
-                        >
-                          <FiTrash2 />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {service.status ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => setEditingService(service)}
+                            className="p-2 text-blue-400 hover:bg-dark-600 rounded-lg transition-colors"
+                          >
+                            <FiEdit2 />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteService(service.id)}
+                            className="p-2 text-red-400 hover:bg-dark-600 rounded-lg transition-colors"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

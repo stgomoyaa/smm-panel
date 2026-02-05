@@ -98,7 +98,7 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white mb-8">Categorías y Subcategorías</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">Categorías y Subcategorías</h1>
 
       {/* Categorías */}
       <div className="mb-8">

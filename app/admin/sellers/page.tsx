@@ -102,8 +102,8 @@ export default function SellersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-white">Vendedores</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-white">Vendedores</h1>
         
         <button
           onClick={() => setShowCreateModal(true)}

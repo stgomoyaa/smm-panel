@@ -42,7 +42,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full mx-4">
         <div className="bg-dark-800 rounded-2xl shadow-2xl border border-dark-700 p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">PuraFama</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Envios Vendedores</h1>
             <p className="text-gray-400">Inicia sesión para continuar</p>
           </div>
 

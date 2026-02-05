@@ -220,49 +220,51 @@ export default function ServicesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-white">Servicios</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-white">Servicios</h1>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
           <button
             onClick={() => setShowBulkModal(true)}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+            className="px-3 md:px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm md:text-base font-bold rounded-lg transition-colors"
           >
             Crear Múltiples
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition-colors"
+            className="px-3 md:px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm md:text-base font-bold rounded-lg transition-colors"
           >
-            + Nuevo Servicio
+            + Nuevo
           </button>
           
-          <FiFilter className="text-gray-400 ml-4" />
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">Todas las categorías</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <FiFilter className="text-gray-400" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm md:text-base focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Todas las categorías</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {services.length === 0 ? (
-        <div className="bg-dark-800 border border-dark-700 rounded-xl p-12 text-center">
+        <div className="bg-dark-800 border border-dark-700 rounded-xl p-8 md:p-12 text-center">
           <p className="text-gray-400 mb-4">No hay servicios disponibles</p>
           <p className="text-sm text-gray-500">
-            Ve a Proveedores y sincroniza servicios
+            Crea servicios desde el botón "+ Nuevo"
           </p>
         </div>
       ) : (
         <div className="bg-dark-800 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-w-full">
             <table className="w-full">
               <thead className="bg-dark-700">
                 <tr>
@@ -454,6 +456,7 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
   const [providerServices, setProviderServices] = useState<any[]>([])
   const [loadingServices, setLoadingServices] = useState(false)
   const [usdToClpRate, setUsdToClpRate] = useState(950)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Obtener tasa de cambio al montar el componente
   useEffect(() => {
@@ -500,8 +503,11 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
 
   const handleServiceSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const serviceId = e.target.value
+    console.log('🔍 Servicio seleccionado:', serviceId)
+    console.log('📋 Total servicios disponibles:', providerServices.length)
     
     if (!serviceId) {
+      console.log('⚠️ Sin servicio seleccionado - reseteando formulario')
       setFormData({
         ...formData,
         apiServiceId: '',
@@ -514,19 +520,29 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
     }
     
     const selectedService = providerServices.find(s => s.service === serviceId)
+    console.log('🎯 Servicio encontrado:', selectedService)
     
     if (selectedService) {
       const costUSD = parseFloat(selectedService.rate)
       const costCLP = Math.round(costUSD * usdToClpRate)
       
-      setFormData({
+      console.log('💰 Costo USD:', costUSD)
+      console.log('💵 Costo CLP:', costCLP)
+      console.log('📊 Tasa de cambio:', usdToClpRate)
+      
+      const newFormData = {
         ...formData,
         name: selectedService.name,
         quantity: selectedService.min || '100',
         apiServiceId: selectedService.service,
         apiProviderPrice: costUSD.toString(),
-        salePrice: Math.round(costCLP * 1.5).toString(), // Sugerencia: 50% de margen
-      })
+        salePrice: Math.round(costCLP * 1.5).toString(),
+      }
+      
+      console.log('✅ Nuevo formData:', newFormData)
+      setFormData(newFormData)
+    } else {
+      console.error('❌ No se encontró el servicio con ID:', serviceId)
     }
   }
 
@@ -662,35 +678,64 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
           </div>
 
           {formData.apiProviderId && (
-            <div>
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Servicio del Proveedor
               </label>
+              
+              {/* Campo de búsqueda */}
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por ID o nombre..."
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary-500"
+              />
+              
               {loadingServices ? (
                 <div className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-gray-400">
                   Cargando servicios...
                 </div>
               ) : (
-                <select
-                  value={formData.apiServiceId}
-                  onChange={handleServiceSelect}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
-                  required
-                >
-                  <option value="">Selecciona un servicio</option>
-                  {providerServices.map((service: any) => {
-                    const costCLP = Math.round(parseFloat(service.rate) * usdToClpRate)
-                    return (
-                      <option key={service.service} value={service.service}>
-                        ID: {service.service} - {service.name} (${costCLP.toLocaleString()} CLP)
-                      </option>
-                    )
-                  })}
-                </select>
+                <>
+                  <select
+                    value={formData.apiServiceId}
+                    onChange={handleServiceSelect}
+                    className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                    required
+                    size={8}
+                  >
+                    <option value="">Selecciona un servicio</option>
+                    {providerServices
+                      .filter((service: any) => {
+                        if (!searchTerm) return true
+                        const search = searchTerm.toLowerCase()
+                        return (
+                          service.service.toString().includes(search) ||
+                          service.name.toLowerCase().includes(search)
+                        )
+                      })
+                      .map((service: any) => {
+                        const costCLP = Math.round(parseFloat(service.rate) * usdToClpRate)
+                        return (
+                          <option key={service.service} value={service.service}>
+                            ID: {service.service} - {service.name} (${costCLP.toLocaleString()} CLP)
+                          </option>
+                        )
+                      })}
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    {providerServices.filter((service: any) => {
+                      if (!searchTerm) return true
+                      const search = searchTerm.toLowerCase()
+                      return (
+                        service.service.toString().includes(search) ||
+                        service.name.toLowerCase().includes(search)
+                      )
+                    }).length} de {providerServices.length} servicios
+                  </p>
+                </>
               )}
-              <p className="text-xs text-gray-500 mt-1">
-                {providerServices.length} servicios disponibles
-              </p>
             </div>
           )}
 

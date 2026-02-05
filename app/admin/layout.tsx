@@ -34,76 +34,76 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
-      <div className="flex">
+      <div className="flex flex-col md:flex-row">
         {/* Sidebar */}
-        <aside className="w-64 min-h-screen bg-dark-800 border-r border-dark-700">
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-white mb-8">PuraFama Admin</h1>
+        <aside className="w-full md:w-64 min-h-screen bg-dark-800 border-b md:border-b-0 md:border-r border-dark-700">
+          <div className="p-4 md:p-6">
+            <h1 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-8">Envios Vendedores Admin</h1>
             
-            <nav className="space-y-2">
+            <nav className="space-y-1 md:space-y-2">
               <Link
                 href="/admin"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
+                className="flex items-center space-x-3 px-3 md:px-4 py-2 md:py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <FiHome className="text-xl" />
-                <span>Dashboard</span>
+                <FiHome className="text-lg md:text-xl" />
+                <span className="text-sm md:text-base">Dashboard</span>
               </Link>
               
               <Link
                 href="/admin/providers"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
+                className="flex items-center space-x-3 px-3 md:px-4 py-2 md:py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <FiServer className="text-xl" />
-                <span>Proveedores</span>
+                <FiServer className="text-lg md:text-xl" />
+                <span className="text-sm md:text-base">Proveedores</span>
               </Link>
               
               <Link
                 href="/admin/categories"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
+                className="flex items-center space-x-3 px-3 md:px-4 py-2 md:py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <FiLayers className="text-xl" />
-                <span>Categorías</span>
+                <FiLayers className="text-lg md:text-xl" />
+                <span className="text-sm md:text-base">Categorías</span>
               </Link>
               
               <Link
                 href="/admin/services"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
+                className="flex items-center space-x-3 px-3 md:px-4 py-2 md:py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <FiGrid className="text-xl" />
-                <span>Servicios</span>
+                <FiGrid className="text-lg md:text-xl" />
+                <span className="text-sm md:text-base">Servicios</span>
               </Link>
               
               <Link
                 href="/admin/sellers"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
+                className="flex items-center space-x-3 px-3 md:px-4 py-2 md:py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <FiUsers className="text-xl" />
-                <span>Vendedores</span>
+                <FiUsers className="text-lg md:text-xl" />
+                <span className="text-sm md:text-base">Vendedores</span>
               </Link>
               
               <Link
                 href="/admin/orders"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
+                className="flex items-center space-x-3 px-3 md:px-4 py-2 md:py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <FiShoppingCart className="text-xl" />
-                <span>Órdenes</span>
+                <FiShoppingCart className="text-lg md:text-xl" />
+                <span className="text-sm md:text-base">Órdenes</span>
               </Link>
             </nav>
 
-            <div className="absolute bottom-6 left-6 right-6">
+            <div className="mt-4 md:absolute md:bottom-6 md:left-6 md:right-6">
               <button
                 onClick={() => signOut({ callbackUrl: '/login' })}
-                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors w-full"
+                className="flex items-center space-x-3 px-3 md:px-4 py-2 md:py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors w-full"
               >
-                <FiLogOut className="text-xl" />
-                <span>Cerrar Sesión</span>
+                <FiLogOut className="text-lg md:text-xl" />
+                <span className="text-sm md:text-base">Cerrar Sesión</span>
               </button>
             </div>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>

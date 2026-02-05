@@ -33,6 +33,7 @@ export async function PATCH(
       id: seller.id,
       name: seller.name,
       email: seller.email,
+      role: seller.role,
       commissionRate: seller.commissionRate,
       status: seller.status,
     })

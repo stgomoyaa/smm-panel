@@ -13,11 +13,11 @@ export async function GET() {
     }
 
     const sellers = await prisma.user.findMany({
-      where: { role: 'seller' },
       select: {
         id: true,
         name: true,
         email: true,
+        role: true,
         commissionRate: true,
         status: true,
         createdAt: true,
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, email, password, commissionRate } = body
+    const { name, email, password, commissionRate, role } = body
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -75,8 +75,8 @@ export async function POST(request: Request) {
         name,
         email,
         password: hashedPassword,
-        role: 'seller',
-        commissionRate: commissionRate || 20,
+        role: role || 'seller',
+        commissionRate: parseFloat(commissionRate) || 20,
         status: true,
       },
     })
@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       id: seller.id,
       name: seller.name,
       email: seller.email,
+      role: seller.role,
       commissionRate: seller.commissionRate,
       status: seller.status,
     })

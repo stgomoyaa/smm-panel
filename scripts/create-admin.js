@@ -11,7 +11,7 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🔄 Creando usuario admin...')
 
-  const email = process.env.ADMIN_EMAIL || 'admin@purafama.cl'
+  const email = (process.env.ADMIN_EMAIL || 'admin@purafama.cl').toLowerCase().trim()
   const password = process.env.ADMIN_PASSWORD || 'Manchita2172!'
 
   // Verificar si el admin ya existe

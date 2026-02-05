@@ -56,9 +56,12 @@ export async function POST(request: Request) {
       )
     }
 
+    // Convertir email a lowercase
+    const normalizedEmail = email.toLowerCase().trim()
+
     // Verificar si el email ya existe
     const existing = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     })
 
     if (existing) {
@@ -73,7 +76,7 @@ export async function POST(request: Request) {
     const seller = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         role: role || 'seller',
         commissionRate: parseFloat(commissionRate) || 20,

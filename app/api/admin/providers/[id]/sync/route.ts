@@ -39,8 +39,12 @@ export async function POST(
     let syncedCount = 0
     let errors: string[] = []
 
+    console.log(`Total services to sync: ${smmServices.length}`)
+
     for (const smmService of smmServices) {
       try {
+        console.log(`Syncing service: ${smmService.service} - ${smmService.name}`)
+        
         // Buscar o crear categoría
         let categoryId = categoryMap.get(smmService.category?.toLowerCase() || 'otros')
         
@@ -54,13 +58,14 @@ export async function POST(
           })
           categoryId = newCategory.id
           categoryMap.set(newCategory.name.toLowerCase(), newCategory.id)
+          console.log(`Created new category: ${newCategory.name}`)
         }
 
         // Verificar si el servicio ya existe
         const existingService = await prisma.service.findFirst({
           where: {
             apiProviderId: providerId,
-            apiServiceId: smmService.service,
+            apiServiceId: String(smmService.service),
           },
         })
 
@@ -78,21 +83,23 @@ export async function POST(
         const serviceData = {
           name: smmService.name,
           categoryId,
-          subcategoryId: null, // El sync automático no asigna subcategoría
+          subcategoryId: null,
           quantity,
           salePrice,
           apiProviderId: providerId,
-          apiServiceId: smmService.service,
+          apiServiceId: String(smmService.service),
           apiProviderPrice: rateUSD,
           status: true,
         }
 
         if (existingService) {
+          console.log(`Updating existing service: ${existingService.id}`)
           await prisma.service.update({
             where: { id: existingService.id },
             data: serviceData,
           })
         } else {
+          console.log(`Creating new service`)
           await prisma.service.create({
             data: {
               ...serviceData,
@@ -102,17 +109,28 @@ export async function POST(
         }
 
         syncedCount++
-      } catch (error) {
-        errors.push(`Error syncing service ${smmService.service}: ${error}`)
+        console.log(`Successfully synced service ${smmService.service}`)
+      } catch (error: any) {
+        const errorMsg = `Service ${smmService.service} (${smmService.name}): ${error.message || error}`
+        console.error(errorMsg)
+        errors.push(errorMsg)
       }
     }
 
-    return NextResponse.json({
-      success: true,
+    console.log(`Sync complete: ${syncedCount}/${smmServices.length} services synced`)
+
+    const response = {
+      success: syncedCount > 0,
       syncedCount,
       totalServices: smmServices.length,
       errors: errors.length > 0 ? errors : undefined,
-    })
+      message: syncedCount > 0 
+        ? `${syncedCount} de ${smmServices.length} servicios sincronizados`
+        : 'No se pudo sincronizar ningún servicio. Revisa los errores.',
+    }
+    
+    console.log('Sync response:', response)
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error syncing services:', error)
     return NextResponse.json(

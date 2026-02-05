@@ -451,11 +451,68 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
     apiServiceId: '',
     apiProviderPrice: '',
   })
+  const [providerServices, setProviderServices] = useState<any[]>([])
+  const [loadingServices, setLoadingServices] = useState(false)
+  const [usdToClpRate, setUsdToClpRate] = useState(950)
+
+  // Obtener tasa de cambio al montar el componente
+  useEffect(() => {
+    fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data.usd.clp) {
+          setUsdToClpRate(data.usd.clp)
+        }
+      })
+      .catch(() => {
+        console.log('Using fallback rate: 950')
+      })
+  }, [])
 
   const handleCategoryChange = (categoryId: string) => {
     setFormData({ ...formData, categoryId, subcategoryId: '' })
     if (categoryId) {
       onFetchSubcategories(parseInt(categoryId))
+    }
+  }
+
+  const handleProviderChange = async (providerId: string) => {
+    setFormData({ ...formData, apiProviderId: providerId, apiServiceId: '', apiProviderPrice: '' })
+    setProviderServices([])
+    
+    if (!providerId) return
+    
+    setLoadingServices(true)
+    try {
+      const res = await fetch(`/api/admin/providers/${providerId}/services`)
+      if (res.ok) {
+        const services = await res.json()
+        setProviderServices(services)
+      } else {
+        toast.error('Error al cargar servicios del proveedor')
+      }
+    } catch (error) {
+      toast.error('Error al cargar servicios')
+    } finally {
+      setLoadingServices(false)
+    }
+  }
+
+  const handleServiceSelect = (serviceId: string) => {
+    const selectedService = providerServices.find(s => s.service === serviceId)
+    
+    if (selectedService) {
+      const costUSD = parseFloat(selectedService.rate)
+      const costCLP = Math.round(costUSD * usdToClpRate)
+      
+      setFormData({
+        ...formData,
+        name: selectedService.name,
+        quantity: selectedService.min || '100',
+        apiServiceId: selectedService.service,
+        apiProviderPrice: costUSD.toString(),
+        salePrice: Math.round(costCLP * 1.5).toString(), // Sugerencia: 50% de margen
+      })
     }
   }
 
@@ -509,6 +566,7 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
                 onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
                 className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
                 required
+                placeholder="Precio final para el cliente"
               />
             </div>
 
@@ -523,7 +581,14 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
                 onChange={(e) => setFormData({ ...formData, apiProviderPrice: e.target.value })}
                 className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
                 required
+                readOnly={!!formData.apiServiceId}
+                placeholder="Se completa al seleccionar servicio"
               />
+              {formData.apiProviderPrice && (
+                <p className="text-xs text-gray-500 mt-1">
+                  ≈ ${Math.round(parseFloat(formData.apiProviderPrice) * usdToClpRate).toLocaleString()} CLP
+                </p>
+              )}
             </div>
           </div>
 
@@ -567,39 +632,76 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Proveedor
-              </label>
-              <select
-                value={formData.apiProviderId}
-                onChange={(e) => setFormData({ ...formData, apiProviderId: e.target.value })}
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
-                required
-              >
-                <option value="">Selecciona un proveedor</option>
-                {providers.map((prov: Provider) => (
-                  <option key={prov.id} value={prov.id}>
-                    {prov.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                ID del Servicio en el Proveedor
-              </label>
-              <input
-                type="text"
-                value={formData.apiServiceId}
-                onChange={(e) => setFormData({ ...formData, apiServiceId: e.target.value })}
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Proveedor
+            </label>
+            <select
+              value={formData.apiProviderId}
+              onChange={(e) => handleProviderChange(e.target.value)}
+              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+              required
+            >
+              <option value="">Selecciona un proveedor</option>
+              {providers.map((prov: Provider) => (
+                <option key={prov.id} value={prov.id}>
+                  {prov.name}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {formData.apiProviderId && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Servicio del Proveedor
+              </label>
+              {loadingServices ? (
+                <div className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-gray-400">
+                  Cargando servicios...
+                </div>
+              ) : (
+                <select
+                  value={formData.apiServiceId}
+                  onChange={(e) => handleServiceSelect(e.target.value)}
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                  required
+                >
+                  <option value="">Selecciona un servicio</option>
+                  {providerServices.map((service: any) => (
+                    <option key={service.service} value={service.service}>
+                      ID: {service.service} - {service.name} (${service.rate} USD)
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                {providerServices.length} servicios disponibles • Tasa: ${usdToClpRate.toFixed(0)} CLP/USD
+              </p>
+            </div>
+          )}
+
+          {formData.apiServiceId && (
+            <div className="bg-dark-700 border border-dark-600 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-300 mb-2">Información Calculada:</h3>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Costo USD:</span>
+                  <span className="text-white">${formData.apiProviderPrice}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Costo CLP:</span>
+                  <span className="text-white">
+                    ${Math.round(parseFloat(formData.apiProviderPrice || '0') * usdToClpRate).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Precio Sugerido (50% margen):</span>
+                  <span className="text-green-400">${parseInt(formData.salePrice || '0').toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center space-x-3 pt-4">
             <button

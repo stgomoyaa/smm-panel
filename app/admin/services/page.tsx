@@ -482,6 +482,7 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
   const handleProviderChange = async (providerId: string) => {
     setFormData({ ...formData, apiProviderId: providerId, apiServiceId: '', apiProviderPrice: '' })
     setProviderServices([])
+    setSearchTerm('')
     
     if (!providerId) return
     
@@ -490,11 +491,18 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
       const res = await fetch(`/api/admin/providers/${providerId}/services`)
       if (res.ok) {
         const services = await res.json()
+        console.log('📦 Servicios recibidos del proveedor:', services.length)
+        console.log('🔍 Primeros 3 servicios:', services.slice(0, 3))
+        console.log('🔍 Tipos de datos del campo service:', services.slice(0, 5).map((s: any) => ({
+          service: s.service,
+          type: typeof s.service
+        })))
         setProviderServices(services)
       } else {
         toast.error('Error al cargar servicios del proveedor')
       }
     } catch (error) {
+      console.error('❌ Error cargando servicios:', error)
       toast.error('Error al cargar servicios')
     } finally {
       setLoadingServices(false)
@@ -503,7 +511,7 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
 
   const handleServiceSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const serviceId = e.target.value
-    console.log('🔍 Servicio seleccionado:', serviceId)
+    console.log('🔍 Servicio seleccionado:', serviceId, 'Tipo:', typeof serviceId)
     console.log('📋 Total servicios disponibles:', providerServices.length)
     
     if (!serviceId) {
@@ -519,8 +527,15 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
       return
     }
     
-    const selectedService = providerServices.find(s => s.service === serviceId)
+    // Comparar tanto como string como número
+    const selectedService = providerServices.find(s => {
+      const svcId = String(s.service)
+      const selectedId = String(serviceId)
+      console.log('🔍 Comparando:', svcId, '===', selectedId, '?', svcId === selectedId)
+      return svcId === selectedId
+    })
     console.log('🎯 Servicio encontrado:', selectedService)
+    console.log('🔍 IDs disponibles (primeros 10):', providerServices.slice(0, 10).map((s: any) => s.service))
     
     if (selectedService) {
       const costUSD = parseFloat(selectedService.rate)
@@ -711,14 +726,14 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
                         if (!searchTerm) return true
                         const search = searchTerm.toLowerCase()
                         return (
-                          service.service.toString().includes(search) ||
+                          String(service.service).includes(search) ||
                           service.name.toLowerCase().includes(search)
                         )
                       })
                       .map((service: any) => {
                         const costCLP = Math.round(parseFloat(service.rate) * usdToClpRate)
                         return (
-                          <option key={service.service} value={service.service}>
+                          <option key={String(service.service)} value={String(service.service)}>
                             ID: {service.service} - {service.name} (${costCLP.toLocaleString()} CLP)
                           </option>
                         )

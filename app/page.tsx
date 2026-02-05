@@ -14,16 +14,10 @@ interface Service {
   id: number
   serviceId: string
   name: string
-  description?: string
-  price: number
-  originalPrice?: number
-  discountValue?: number
   quantity: number
-  min: number
-  max: number
-  averageTime?: string
-  refillEnabled: boolean
-  serviceType: string
+  salePrice: number
+  categoryId: number
+  subcategoryId?: number | null
 }
 
 export default function HomePage() {
@@ -56,9 +50,16 @@ export default function HomePage() {
     try {
       const res = await fetch('/api/public/categories')
       const data = await res.json()
+      
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Error al cargar categorías')
+        return
+      }
+      
       setCategories(data)
     } catch (error) {
       toast.error('Error al cargar categorías')
+      console.error('Error fetching categories:', error)
     }
   }
 
@@ -66,10 +67,19 @@ export default function HomePage() {
     try {
       const res = await fetch(`/api/public/services?categoryId=${categoryId}`)
       const data = await res.json()
+      
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Error al cargar servicios')
+        setServices([])
+        return
+      }
+      
       setServices(data)
       setSelectedService(null)
     } catch (error) {
       toast.error('Error al cargar servicios')
+      setServices([])
+      console.error('Error fetching services:', error)
     }
   }
 
@@ -170,13 +180,7 @@ export default function HomePage() {
                   <option value="">Selecciona un servicio</option>
                   {services.map((service) => (
                     <option key={service.id} value={service.id}>
-                      {service.name} - {service.discountValue ? (
-                        <>
-                          <span className="line-through">${service.originalPrice}</span> ${service.price}
-                        </>
-                      ) : (
-                        `$${service.price}`
-                      )}
+                      {service.name} - ${service.salePrice.toLocaleString()}
                     </option>
                   ))}
                 </select>
@@ -188,18 +192,12 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-400 text-sm">Precio:</span>
                     <span className="text-2xl font-bold text-primary-400">
-                      ${selectedService.price}
+                      ${selectedService.salePrice.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Min: {selectedService.min}</span>
-                    <span className="text-gray-400">Max: {selectedService.max}</span>
+                    <span className="text-gray-400">Cantidad: {selectedService.quantity.toLocaleString()}</span>
                   </div>
-                  {selectedService.averageTime && (
-                    <div className="mt-2 text-sm text-gray-400">
-                      ⏱️ Tiempo promedio: {selectedService.averageTime}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -218,23 +216,17 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* Quantity */}
+              {/* Quantity - Fixed amount, just display it */}
               {selectedService && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Cantidad
+                    Cantidad (fija)
                   </label>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Number(e.target.value))}
-                    min={selectedService.min}
-                    max={selectedService.max}
-                    className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    required
-                  />
+                  <div className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white">
+                    {selectedService.quantity.toLocaleString()}
+                  </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    Min: {selectedService.min} - Max: {selectedService.max}
+                    Este servicio incluye {selectedService.quantity.toLocaleString()} unidades
                   </p>
                 </div>
               )}

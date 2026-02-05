@@ -14,14 +14,25 @@ interface Seller {
   createdAt: string
 }
 
+interface SellerProfit {
+  sellerId: number
+  totalRevenue: number
+  totalCost: number
+  commission: number
+  netProfit: number
+  orderCount: number
+}
+
 export default function SellersPage() {
   const [sellers, setSellers] = useState<Seller[]>([])
+  const [sellerProfits, setSellerProfits] = useState<{ [key: number]: SellerProfit }>({})
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null)
 
   useEffect(() => {
     fetchSellers()
+    fetchSellerProfits()
   }, [])
 
   const fetchSellers = async () => {
@@ -33,6 +44,22 @@ export default function SellersPage() {
       toast.error('Error al cargar vendedores')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchSellerProfits = async () => {
+    try {
+      const res = await fetch('/api/admin/seller-profits')
+      if (res.ok) {
+        const data = await res.json()
+        const profitsMap: { [key: number]: SellerProfit } = {}
+        data.forEach((profit: SellerProfit) => {
+          profitsMap[profit.sellerId] = profit
+        })
+        setSellerProfits(profitsMap)
+      }
+    } catch (error) {
+      console.error('Error fetching seller profits:', error)
     }
   }
 
@@ -124,80 +151,112 @@ export default function SellersPage() {
             <table className="w-full">
               <thead className="bg-dark-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Vendedor
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase hidden lg:table-cell">
                     Email
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Comisión
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase hidden md:table-cell">
+                    Ventas
+                  </th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase">
+                    Ganancia
+                  </th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase hidden sm:table-cell">
                     Estado
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                    Rol
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase">
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-700">
-                {sellers.map((seller) => (
-                  <tr key={seller.id} className="hover:bg-dark-700 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="text-white font-medium">{seller.name}</div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      {seller.email}
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      {seller.commissionRate}%
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          seller.status
-                            ? 'bg-green-900 text-green-300'
-                            : 'bg-red-900 text-red-300'
-                        }`}
-                      >
-                        {seller.status ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          seller.role === 'admin'
-                            ? 'bg-purple-900 text-purple-300'
-                            : 'bg-blue-900 text-blue-300'
-                        }`}
-                      >
-                        {seller.role === 'admin' ? 'Admin' : 'Vendedor'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => setEditingSeller(seller)}
-                          className="p-2 text-blue-400 hover:bg-dark-600 rounded-lg transition-colors"
-                        >
-                          <FiEdit2 />
-                        </button>
-                        {seller.role !== 'admin' && (
-                          <button
-                            onClick={() => handleDeleteSeller(seller.id)}
-                            className="p-2 text-red-400 hover:bg-dark-600 rounded-lg transition-colors"
-                          >
-                            <FiTrash2 />
-                          </button>
+                {sellers.map((seller) => {
+                  const profit = sellerProfits[seller.id]
+                  return (
+                    <tr key={seller.id} className="hover:bg-dark-700 transition-colors">
+                      <td className="px-3 md:px-6 py-3 md:py-4">
+                        <div className="text-white font-medium text-sm md:text-base">{seller.name}</div>
+                        <div className="text-xs text-gray-500">
+                          <span className={`${
+                            seller.role === 'admin'
+                              ? 'text-purple-400'
+                              : 'text-blue-400'
+                          }`}>
+                            {seller.role === 'admin' ? 'Admin' : 'Vendedor'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-gray-300 text-sm hidden lg:table-cell">
+                        {seller.email}
+                      </td>
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-gray-300 text-sm md:text-base">
+                        {seller.commissionRate}%
+                      </td>
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-right hidden md:table-cell">
+                        {profit ? (
+                          <div>
+                            <div className="text-white font-semibold text-sm md:text-base">
+                              ${profit.totalRevenue.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {profit.orderCount} órdenes
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">-</span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-right">
+                        {profit ? (
+                          <div>
+                            <div className="text-green-400 font-bold text-sm md:text-base">
+                              ${profit.netProfit.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-orange-400">
+                              -${profit.commission.toLocaleString()} comisión
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">$0</span>
+                        )}
+                      </td>
+                      <td className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            seller.status
+                              ? 'bg-green-900 text-green-300'
+                              : 'bg-red-900 text-red-300'
+                          }`}
+                        >
+                          {seller.status ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-right">
+                        <div className="flex items-center justify-end space-x-1 md:space-x-2">
+                          <button
+                            onClick={() => setEditingSeller(seller)}
+                            className="p-1.5 md:p-2 text-blue-400 hover:bg-dark-600 rounded-lg transition-colors"
+                          >
+                            <FiEdit2 className="text-sm md:text-base" />
+                          </button>
+                          {seller.role !== 'admin' && (
+                            <button
+                              onClick={() => handleDeleteSeller(seller.id)}
+                              className="p-1.5 md:p-2 text-red-400 hover:bg-dark-600 rounded-lg transition-colors"
+                            >
+                              <FiTrash2 className="text-sm md:text-base" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

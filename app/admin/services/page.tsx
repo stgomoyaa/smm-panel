@@ -50,6 +50,8 @@ export default function ServicesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [usdToClpRate, setUsdToClpRate] = useState(950) // Fallback rate
+  const [sortBy, setSortBy] = useState<'name' | 'price'>('name')
+  const [recalculating, setRecalculating] = useState(false)
 
   useEffect(() => {
     fetchServices()
@@ -183,6 +185,79 @@ export default function ServicesPage() {
     }
   }
 
+  const handleRecalculateCosts = async () => {
+    if (!confirm('¿Recalcular los costos de todos los servicios desde la API del proveedor?')) {
+      return
+    }
+
+    setRecalculating(true)
+    try {
+      let updatedCount = 0
+      let errorCount = 0
+
+      // Obtener todos los servicios
+      const allServices = services
+
+      // Agrupar por proveedor para optimizar
+      const servicesByProvider: { [key: number]: Service[] } = {}
+      allServices.forEach(service => {
+        if (service.provider?.id) {
+          if (!servicesByProvider[service.provider.id]) {
+            servicesByProvider[service.provider.id] = []
+          }
+          servicesByProvider[service.provider.id].push(service)
+        }
+      })
+
+      // Recalcular por proveedor
+      for (const [providerId, providerServices] of Object.entries(servicesByProvider)) {
+        try {
+          // Obtener servicios del proveedor
+          const res = await fetch(`/api/admin/providers/${providerId}/services`)
+          if (!res.ok) continue
+
+          const apiServices = await res.json()
+
+          // Actualizar cada servicio
+          for (const service of providerServices) {
+            const apiService = apiServices.find((s: any) => String(s.service) === String(service.serviceId))
+            
+            if (apiService && apiService.rate) {
+              const newPrice = parseFloat(apiService.rate)
+              
+              // Solo actualizar si cambió el precio
+              if (service.apiProviderPrice !== newPrice) {
+                const updateRes = await fetch(`/api/admin/services/${service.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    apiProviderPrice: newPrice
+                  })
+                })
+
+                if (updateRes.ok) {
+                  updatedCount++
+                } else {
+                  errorCount++
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error procesando proveedor ${providerId}:`, error)
+          errorCount++
+        }
+      }
+
+      toast.success(`✅ ${updatedCount} costos actualizados${errorCount > 0 ? ` | ❌ ${errorCount} errores` : ''}`)
+      fetchServices()
+    } catch (error) {
+      toast.error('Error al recalcular costos')
+    } finally {
+      setRecalculating(false)
+    }
+  }
+
   const handleBulkCreate = async (bulkText: string) => {
     try {
       const lines = bulkText.trim().split('\n')
@@ -313,6 +388,13 @@ export default function ServicesPage() {
           >
             + Nuevo
           </button>
+          <button
+            onClick={handleRecalculateCosts}
+            disabled={recalculating}
+            className="px-3 md:px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 text-white text-sm md:text-base font-bold rounded-lg transition-colors"
+          >
+            {recalculating ? '⏳ Recalculando...' : '🔄 Recalcular Costos'}
+          </button>
           
           <div className="flex items-center gap-2 w-full md:w-auto">
             <FiFilter className="text-gray-400" />
@@ -327,6 +409,18 @@ export default function ServicesPage() {
                   {cat.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <span className="text-gray-400 text-sm">Ordenar:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'name' | 'price')}
+              className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm md:text-base focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="name">Nombre</option>
+              <option value="price">Precio</option>
             </select>
           </div>
         </div>
@@ -372,7 +466,12 @@ export default function ServicesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-700">
-                {services.map((service) => {
+                {[...services].sort((a, b) => {
+                  if (sortBy === 'price') {
+                    return a.salePrice - b.salePrice
+                  }
+                  return a.name.localeCompare(b.name)
+                }).map((service) => {
                   const costClp = Math.round(service.apiProviderPrice * usdToClpRate)
                   const margin = service.salePrice - costClp
                   const marginPercent = costClp > 0 ? ((margin / costClp) * 100).toFixed(0) : 0

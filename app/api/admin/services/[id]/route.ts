@@ -21,6 +21,7 @@ export async function PATCH(
       quantity,
       salePrice,
       status,
+      apiProviderPrice,
     } = body
 
     const updateData: any = {}
@@ -28,6 +29,7 @@ export async function PATCH(
     if (quantity !== undefined) updateData.quantity = parseInt(quantity)
     if (salePrice !== undefined) updateData.salePrice = parseFloat(salePrice)
     if (status !== undefined) updateData.status = Boolean(status)
+    if (apiProviderPrice !== undefined) updateData.apiProviderPrice = parseFloat(apiProviderPrice)
 
     console.log('💾 Datos a actualizar:', updateData)
 

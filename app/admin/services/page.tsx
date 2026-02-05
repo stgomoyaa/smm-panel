@@ -8,15 +8,16 @@ interface Service {
   id: number
   serviceId: string
   name: string
-  price: number
-  originalPrice?: number
-  discountValue?: number
-  min: number
-  max: number
+  quantity: number
+  salePrice: number
+  apiProviderPrice: number
   status: boolean
   category: {
     name: string
   }
+  subcategory?: {
+    name: string
+  } | null
   provider?: {
     name: string
   }
@@ -27,16 +28,32 @@ interface Category {
   name: string
 }
 
+interface Subcategory {
+  id: number
+  name: string
+  categoryId: number
+}
+
+interface Provider {
+  id: number
+  name: string
+}
+
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
+  const [providers, setProviders] = useState<Provider[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [editingService, setEditingService] = useState<Service | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showBulkModal, setShowBulkModal] = useState(false)
 
   useEffect(() => {
     fetchServices()
     fetchCategories()
+    fetchProviders()
   }, [selectedCategory])
 
   const fetchCategories = async () => {
@@ -46,6 +63,29 @@ export default function ServicesPage() {
       setCategories(data)
     } catch (error) {
       console.error('Error fetching categories:', error)
+    }
+  }
+
+  const fetchSubcategories = async (categoryId?: number) => {
+    try {
+      const url = categoryId 
+        ? `/api/admin/subcategories?categoryId=${categoryId}`
+        : `/api/admin/subcategories`
+      const res = await fetch(url)
+      const data = await res.json()
+      setSubcategories(data)
+    } catch (error) {
+      console.error('Error fetching subcategories:', error)
+    }
+  }
+
+  const fetchProviders = async () => {
+    try {
+      const res = await fetch('/api/admin/providers')
+      const data = await res.json()
+      setProviders(data)
+    } catch (error) {
+      console.error('Error fetching providers:', error)
     }
   }
 
@@ -104,6 +144,76 @@ export default function ServicesPage() {
     }
   }
 
+  const handleCreateService = async (serviceData: any) => {
+    try {
+      const res = await fetch('/api/admin/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serviceData),
+      })
+
+      if (res.ok) {
+        toast.success('Servicio creado')
+        fetchServices()
+        setShowCreateModal(false)
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Error al crear servicio')
+      }
+    } catch (error) {
+      toast.error('Error al procesar la solicitud')
+    }
+  }
+
+  const handleBulkCreate = async (bulkText: string) => {
+    try {
+      // Parse bulk text: formato "quantity|price|apiServiceId|subcategoryId"
+      const lines = bulkText.trim().split('\n')
+      let successCount = 0
+      let errorCount = 0
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+        
+        const [quantity, salePrice, apiServiceId, subcategoryId, providerId] = line.split('|').map(s => s.trim())
+        
+        if (!quantity || !salePrice || !apiServiceId) {
+          errorCount++
+          continue
+        }
+
+        const serviceData = {
+          name: `${quantity} unidades`,
+          categoryId: categories[0]?.id, // Usar primera categoría por defecto
+          subcategoryId: subcategoryId ? parseInt(subcategoryId) : null,
+          quantity: parseInt(quantity),
+          salePrice: parseFloat(salePrice),
+          apiProviderId: providerId ? parseInt(providerId) : providers[0]?.id,
+          apiServiceId,
+          apiProviderPrice: 0,
+        }
+
+        const res = await fetch('/api/admin/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(serviceData),
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      }
+
+      toast.success(`${successCount} servicios creados${errorCount > 0 ? `, ${errorCount} errores` : ''}`)
+      fetchServices()
+      setShowBulkModal(false)
+    } catch (error) {
+      toast.error('Error al procesar servicios bulk')
+    }
+  }
+
   if (loading) {
     return <div className="text-white">Cargando...</div>
   }
@@ -114,7 +224,20 @@ export default function ServicesPage() {
         <h1 className="text-3xl font-bold text-white">Servicios</h1>
         
         <div className="flex items-center space-x-3">
-          <FiFilter className="text-gray-400" />
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+          >
+            Crear Múltiples
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition-colors"
+          >
+            + Nuevo Servicio
+          </button>
+          
+          <FiFilter className="text-gray-400 ml-4" />
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -153,10 +276,10 @@ export default function ServicesPage() {
                     Proveedor
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                    Precio
+                    Cantidad
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                    Min/Max
+                    Precio
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                     Estado
@@ -179,16 +302,14 @@ export default function ServicesPage() {
                     <td className="px-6 py-4 text-gray-300">
                       {service.provider?.name || '-'}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-white font-bold">${service.price}</div>
-                      {service.discountValue && (
-                        <div className="text-xs text-gray-500 line-through">
-                          ${service.originalPrice}
-                        </div>
-                      )}
-                    </td>
                     <td className="px-6 py-4 text-gray-300">
-                      {service.min} - {service.max}
+                      {service.quantity.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-white font-bold">${service.salePrice.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">
+                        Costo: ${service.apiProviderPrice}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -234,13 +355,27 @@ export default function ServicesPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Precio
+                  Precio de Venta
                 </label>
                 <input
                   type="number"
-                  defaultValue={editingService.price}
+                  defaultValue={editingService.salePrice}
                   onChange={(e) =>
-                    setEditingService({ ...editingService, price: parseFloat(e.target.value) })
+                    setEditingService({ ...editingService, salePrice: parseFloat(e.target.value) })
+                  }
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Cantidad
+                </label>
+                <input
+                  type="number"
+                  defaultValue={editingService.quantity}
+                  onChange={(e) =>
+                    setEditingService({ ...editingService, quantity: parseInt(e.target.value) })
                   }
                   className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
                 />
@@ -280,6 +415,265 @@ export default function ServicesPage() {
           </div>
         </div>
       )}
+
+      {/* Create Service Modal */}
+      {showCreateModal && (
+        <CreateServiceModal
+          categories={categories}
+          subcategories={subcategories}
+          providers={providers}
+          onFetchSubcategories={fetchSubcategories}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateService}
+        />
+      )}
+
+      {/* Bulk Create Modal */}
+      {showBulkModal && (
+        <BulkCreateModal
+          onClose={() => setShowBulkModal(false)}
+          onCreate={handleBulkCreate}
+        />
+      )}
+    </div>
+  )
+}
+
+// Create Service Modal Component
+function CreateServiceModal({ categories, subcategories, providers, onFetchSubcategories, onClose, onCreate }: any) {
+  const [formData, setFormData] = useState({
+    name: '',
+    categoryId: '',
+    subcategoryId: '',
+    quantity: '',
+    salePrice: '',
+    apiProviderId: '',
+    apiServiceId: '',
+    apiProviderPrice: '',
+  })
+
+  const handleCategoryChange = (categoryId: string) => {
+    setFormData({ ...formData, categoryId, subcategoryId: '' })
+    if (categoryId) {
+      onFetchSubcategories(parseInt(categoryId))
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onCreate(formData)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 max-w-2xl w-full my-8">
+        <h2 className="text-2xl font-bold text-white mb-6">Crear Nuevo Servicio</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Nombre
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Cantidad
+              </label>
+              <input
+                type="number"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Precio de Venta (CLP)
+              </label>
+              <input
+                type="number"
+                value={formData.salePrice}
+                onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Costo Proveedor (USD)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.apiProviderPrice}
+                onChange={(e) => setFormData({ ...formData, apiProviderPrice: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Categoría
+              </label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                required
+              >
+                <option value="">Selecciona una categoría</option>
+                {categories.map((cat: Category) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Subcategoría
+              </label>
+              <select
+                value={formData.subcategoryId}
+                onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                disabled={!formData.categoryId}
+              >
+                <option value="">Sin subcategoría</option>
+                {subcategories.map((sub: Subcategory) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Proveedor
+              </label>
+              <select
+                value={formData.apiProviderId}
+                onChange={(e) => setFormData({ ...formData, apiProviderId: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                required
+              >
+                <option value="">Selecciona un proveedor</option>
+                {providers.map((prov: Provider) => (
+                  <option key={prov.id} value={prov.id}>
+                    {prov.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                ID del Servicio en el Proveedor
+              </label>
+              <input
+                type="text"
+                value={formData.apiServiceId}
+                onChange={(e) => setFormData({ ...formData, apiServiceId: e.target.value })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition-colors"
+            >
+              Crear Servicio
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 bg-dark-700 hover:bg-dark-600 text-white font-bold rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Bulk Create Modal Component
+function BulkCreateModal({ onClose, onCreate }: any) {
+  const [bulkText, setBulkText] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onCreate(bulkText)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 max-w-4xl w-full">
+        <h2 className="text-2xl font-bold text-white mb-4">Crear Múltiples Servicios</h2>
+        <p className="text-gray-400 text-sm mb-6">
+          Formato por línea: <code className="bg-dark-700 px-2 py-1 rounded">cantidad|precio|idServicioAPI|idSubcategoria|idProveedor</code>
+        </p>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Servicios (uno por línea)
+            </label>
+            <textarea
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+              rows={15}
+              placeholder="1000|5990|123|1|1&#10;2000|9990|124|1|1&#10;5000|19990|125|1|1"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Ejemplo: <code>1000|5990|123|1|1</code> crea un servicio de 1000 unidades a $5990
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+            >
+              Crear Servicios
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 bg-dark-700 hover:bg-dark-600 text-white font-bold rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       status,
     } = body
 
-    if (!name || !categoryId || !subcategoryId || !quantity || !salePrice || !apiProviderId || !apiServiceId) {
+    if (!name || !categoryId || !quantity || !salePrice || !apiProviderId || !apiServiceId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         serviceId: generateServiceId(),
         name,
         categoryId: parseInt(categoryId),
-        subcategoryId: parseInt(subcategoryId),
+        subcategoryId: subcategoryId ? parseInt(subcategoryId) : null,
         quantity: parseInt(quantity),
         salePrice: parseFloat(salePrice),
         apiProviderId: parseInt(apiProviderId),

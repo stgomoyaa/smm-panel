@@ -14,38 +14,36 @@ export async function PATCH(
     }
 
     const body = await request.json()
+    console.log('📝 Actualizando servicio:', params.id, 'con datos:', body)
+    
     const {
       name,
-      description,
-      price,
-      originalPrice,
-      discountValue,
-      min,
-      max,
+      quantity,
+      salePrice,
       status,
-      averageTime,
     } = body
+
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = String(name).trim()
+    if (quantity !== undefined) updateData.quantity = parseInt(quantity)
+    if (salePrice !== undefined) updateData.salePrice = parseFloat(salePrice)
+    if (status !== undefined) updateData.status = Boolean(status)
+
+    console.log('💾 Datos a actualizar:', updateData)
 
     const service = await prisma.service.update({
       where: { id: parseInt(params.id) },
-      data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(price !== undefined && { price }),
-        ...(originalPrice !== undefined && { originalPrice }),
-        ...(discountValue !== undefined && { discountValue }),
-        ...(min !== undefined && { min }),
-        ...(max !== undefined && { max }),
-        ...(status !== undefined && { status }),
-        ...(averageTime !== undefined && { averageTime }),
-      },
+      data: updateData,
     })
 
+    console.log('✅ Servicio actualizado exitosamente')
     return NextResponse.json(service)
-  } catch (error) {
-    console.error('Error updating service:', error)
+
+  } catch (error: any) {
+    console.error('❌ Error updating service:', error)
+    console.error('❌ Error message:', error.message)
     return NextResponse.json(
-      { error: 'Failed to update service' },
+      { error: error.message || 'Failed to update service' },
       { status: 500 }
     )
   }

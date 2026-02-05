@@ -353,17 +353,18 @@ export default function ServicesPage() {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 max-w-md w-full">
             <h2 className="text-2xl font-bold text-white mb-6">Editar Servicio</h2>
+            <p className="text-sm text-gray-400 mb-4">ID: {editingService.serviceId}</p>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Precio de Venta
+                  Nombre del Servicio
                 </label>
                 <input
-                  type="number"
-                  defaultValue={editingService.salePrice}
+                  type="text"
+                  value={editingService.name}
                   onChange={(e) =>
-                    setEditingService({ ...editingService, salePrice: parseFloat(e.target.value) })
+                    setEditingService({ ...editingService, name: e.target.value })
                   }
                   className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
                 />
@@ -375,9 +376,23 @@ export default function ServicesPage() {
                 </label>
                 <input
                   type="number"
-                  defaultValue={editingService.quantity}
+                  value={editingService.quantity}
                   onChange={(e) =>
                     setEditingService({ ...editingService, quantity: parseInt(e.target.value) })
+                  }
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Precio de Venta (CLP)
+                </label>
+                <input
+                  type="number"
+                  value={editingService.salePrice}
+                  onChange={(e) =>
+                    setEditingService({ ...editingService, salePrice: parseFloat(e.target.value) })
                   }
                   className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
                 />
@@ -541,17 +556,34 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
       const costUSD = parseFloat(selectedService.rate)
       const costCLP = Math.round(costUSD * usdToClpRate)
       
+      // Calcular cantidad sugerida (entre min y max, buscando un valor realista)
+      const minQty = parseInt(selectedService.min) || 100
+      const maxQty = parseInt(selectedService.max) || 10000
+      
+      // Si el min es muy bajo (<100), sugerir 1000
+      // Si el min es razonable (>=100), usar el min
+      let suggestedQty = minQty
+      if (minQty < 100) {
+        suggestedQty = Math.min(1000, maxQty)
+      }
+      
+      // Precio sugerido: costCLP × 1.5 (50% de margen sobre el costo)
+      const suggestedPrice = Math.round(costCLP * 1.5)
+      
       console.log('💰 Costo USD:', costUSD)
       console.log('💵 Costo CLP:', costCLP)
       console.log('📊 Tasa de cambio:', usdToClpRate)
+      console.log('📦 Min/Max:', minQty, '/', maxQty)
+      console.log('🎯 Cantidad sugerida:', suggestedQty)
+      console.log('💲 Precio sugerido:', suggestedPrice)
       
       const newFormData = {
         ...formData,
         name: selectedService.name,
-        quantity: selectedService.min || '100',
+        quantity: suggestedQty.toString(),
         apiServiceId: selectedService.service,
         apiProviderPrice: costUSD.toString(),
-        salePrice: Math.round(costCLP * 1.5).toString(),
+        salePrice: suggestedPrice.toString(),
       }
       
       console.log('✅ Nuevo formData:', newFormData)

@@ -64,22 +64,26 @@ export async function POST(
           },
         })
 
+        // Convertir rate de USD a CLP (aproximado 950)
+        const rateUSD = parseFloat(smmService.rate)
+        const usdToClp = 950
+        const rateCLP = rateUSD * usdToClp
+        
+        // Calcular precio de venta con 50% de margen
+        const salePrice = Math.round(rateCLP * 1.5)
+        
+        // Usar el valor mínimo como cantidad por defecto
+        const quantity = parseInt(smmService.min) || 100
+        
         const serviceData = {
           name: smmService.name,
           categoryId,
           subcategoryId: null, // El sync automático no asigna subcategoría
-          quantity: 0, // Valor por defecto
-          salePrice: parseFloat(smmService.rate) * 1.5, // 50% de margen por defecto
-          price: parseFloat(smmService.rate),
-          originalPrice: parseFloat(smmService.rate),
-          min: parseInt(smmService.min),
-          max: parseInt(smmService.max),
+          quantity,
+          salePrice,
           apiProviderId: providerId,
           apiServiceId: smmService.service,
-          apiProviderPrice: parseFloat(smmService.rate),
-          serviceType: smmService.type || 'default',
-          refillEnabled: smmService.refill || false,
-          cancelEnabled: smmService.cancel || false,
+          apiProviderPrice: rateUSD,
           status: true,
         }
 

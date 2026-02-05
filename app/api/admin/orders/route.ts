@@ -29,6 +29,13 @@ export async function GET(request: Request) {
               category: true,
             },
           },
+          seller: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

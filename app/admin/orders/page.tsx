@@ -14,6 +14,9 @@ interface Order {
   link: string
   quantity: number
   salePrice: number
+  providerCost: number
+  commission: number
+  profit: number
   status: string
   statusApi?: string
   remains?: number
@@ -22,6 +25,10 @@ interface Order {
     category: {
       name: string
     }
+  }
+  seller: {
+    name: string
+    email: string
   }
 }
 
@@ -117,25 +124,28 @@ export default function OrdersPage() {
                       ID
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                      Email
+                      Cliente
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                      Vendedor
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                       Servicio
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                      Link
+                      Precio Venta
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                      Cantidad
+                      Comisión
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                      Precio
+                      Costo
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                      Ganancia
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
                       Estado
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
-                      Fecha
                     </th>
                   </tr>
                 </thead>
@@ -148,32 +158,51 @@ export default function OrdersPage() {
                           <div className="text-white font-mono text-sm">
                             {order.orderId}
                           </div>
+                          <div className="text-xs text-gray-500">
+                            {formatDate(order.createdAt)}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 text-gray-300">
-                          {order.customerContact || order.customerName || 'N/A'}
+                        <td className="px-6 py-4">
+                          <div className="text-gray-300">
+                            {order.customerContact || order.customerName || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate max-w-xs">
+                            {order.link}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-gray-300">{order.seller?.name || 'N/A'}</div>
+                          <div className="text-xs text-gray-500">{order.seller?.email || ''}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-white">{order.serviceName}</div>
                           <div className="text-xs text-gray-500">
-                            {order.service.category.name}
+                            {order.quantity.toLocaleString()} unidades
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-gray-300 truncate max-w-xs">
-                            {order.link}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-gray-300">
-                          {order.quantity}
-                          {order.remains !== undefined && order.remains > 0 && (
-                            <div className="text-xs text-yellow-400">
-                              Quedan: {order.remains}
-                            </div>
-                          )}
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-white font-bold">
-                            ${order.salePrice}
+                            ${order.salePrice.toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-orange-400">
+                            ${order.commission.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-gray-500">20%</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-red-400">
+                            ${Math.round(order.providerCost * 950).toLocaleString()}
+                          </div>
+                          <div className="text-xs text-gray-500">${order.providerCost.toFixed(2)} USD</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className={`font-bold ${order.profit > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            ${order.profit.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {((order.profit / order.salePrice) * 100).toFixed(1)}%
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -182,9 +211,6 @@ export default function OrdersPage() {
                           >
                             {statusDisplay.label}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-400 text-sm">
-                          {formatDate(order.createdAt)}
                         </td>
                       </tr>
                     )

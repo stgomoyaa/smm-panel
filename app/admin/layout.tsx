@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { FiHome, FiServer, FiShoppingCart, FiGrid, FiLogOut } from 'react-icons/fi'
+import { FiHome, FiServer, FiShoppingCart, FiGrid, FiLogOut, FiLayers, FiUsers } from 'react-icons/fi'
 import { signOut } from 'next-auth/react'
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
@@ -58,6 +58,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </Link>
               
               <Link
+                href="/admin/categories"
+                className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
+              >
+                <FiLayers className="text-xl" />
+                <span>Categorías</span>
+              </Link>
+              
+              <Link
                 href="/admin/services"
                 className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
@@ -69,7 +77,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 href="/admin/sellers"
                 className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <FiGrid className="text-xl" />
+                <FiUsers className="text-xl" />
                 <span>Vendedores</span>
               </Link>
               

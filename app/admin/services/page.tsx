@@ -167,23 +167,43 @@ export default function ServicesPage() {
 
   const handleBulkCreate = async (bulkText: string) => {
     try {
-      // Parse bulk text: formato "quantity|price|apiServiceId|subcategoryId"
       const lines = bulkText.trim().split('\n')
       let successCount = 0
       let errorCount = 0
+      const errors: string[] = []
 
-      for (const line of lines) {
-        if (!line.trim()) continue
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim()
+        if (!line) continue
         
-        const [quantity, salePrice, apiServiceId, subcategoryId, providerId] = line.split('|').map(s => s.trim())
+        const parts = line.split('|').map(s => s.trim())
+        
+        // Formato flexible:
+        // 5 campos: cantidad|precio|idServicioAPI|idSubcategoria|idProveedor (nombre auto)
+        // 6 campos: nombre|cantidad|precio|idServicioAPI|idSubcategoria|idProveedor (nombre personalizado)
+        let name, quantity, salePrice, apiServiceId, subcategoryId, providerId
+        
+        if (parts.length === 5) {
+          // Formato sin nombre personalizado
+          [quantity, salePrice, apiServiceId, subcategoryId, providerId] = parts
+          name = `${quantity} unidades`
+        } else if (parts.length === 6) {
+          // Formato con nombre personalizado
+          [name, quantity, salePrice, apiServiceId, subcategoryId, providerId] = parts
+        } else {
+          errors.push(`Línea ${i + 1}: formato inválido (debe tener 5 o 6 campos)`)
+          errorCount++
+          continue
+        }
         
         if (!quantity || !salePrice || !apiServiceId) {
+          errors.push(`Línea ${i + 1}: faltan campos obligatorios`)
           errorCount++
           continue
         }
 
         const serviceData = {
-          name: `${quantity} unidades`,
+          name: name || `${quantity} unidades`,
           categoryId: categories[0]?.id, // Usar primera categoría por defecto
           subcategoryId: subcategoryId ? parseInt(subcategoryId) : null,
           quantity: parseInt(quantity),
@@ -202,11 +222,22 @@ export default function ServicesPage() {
         if (res.ok) {
           successCount++
         } else {
+          const data = await res.json().catch(() => ({ error: 'Error desconocido' }))
+          errors.push(`Línea ${i + 1}: ${data.error}`)
           errorCount++
         }
       }
 
-      toast.success(`${successCount} servicios creados${errorCount > 0 ? `, ${errorCount} errores` : ''}`)
+      if (successCount > 0) {
+        toast.success(`✅ ${successCount} servicios creados${errorCount > 0 ? ` | ❌ ${errorCount} errores` : ''}`)
+      }
+      
+      if (errors.length > 0 && errors.length <= 5) {
+        errors.forEach(err => toast.error(err, { duration: 5000 }))
+      } else if (errors.length > 5) {
+        toast.error(`${errors.length} errores encontrados. Revisa el formato.`, { duration: 5000 })
+      }
+      
       fetchServices()
       setShowBulkModal(false)
     } catch (error) {
@@ -844,11 +875,42 @@ function BulkCreateModal({ onClose, onCreate }: any) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 max-w-4xl w-full">
+      <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold text-white mb-4">Crear Múltiples Servicios</h2>
-        <p className="text-gray-400 text-sm mb-6">
-          Formato por línea: <code className="bg-dark-700 px-2 py-1 rounded">cantidad|precio|idServicioAPI|idSubcategoria|idProveedor</code>
-        </p>
+        
+        <div className="bg-dark-700 rounded-lg p-4 mb-6 space-y-3">
+          <h3 className="text-lg font-semibold text-white mb-2">📝 Formatos Permitidos:</h3>
+          
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm text-gray-300 mb-1">✅ <strong>Con nombre personalizado</strong> (6 campos):</p>
+              <code className="block bg-dark-600 px-3 py-2 rounded text-sm text-green-400">
+                nombre|cantidad|precio|idServicioAPI|idSubcategoria|idProveedor
+              </code>
+            </div>
+            
+            <div>
+              <p className="text-sm text-gray-300 mb-1">✅ <strong>Sin nombre</strong> (5 campos, nombre auto-generado):</p>
+              <code className="block bg-dark-600 px-3 py-2 rounded text-sm text-blue-400">
+                cantidad|precio|idServicioAPI|idSubcategoria|idProveedor
+              </code>
+            </div>
+          </div>
+
+          <div className="border-t border-dark-600 pt-3 mt-3">
+            <p className="text-xs text-gray-400 mb-2">
+              <strong>Campos:</strong>
+            </p>
+            <ul className="text-xs text-gray-400 space-y-1 ml-4">
+              <li>• <strong>nombre</strong>: Nombre descriptivo del servicio (opcional)</li>
+              <li>• <strong>cantidad</strong>: Cantidad de unidades (requerido)</li>
+              <li>• <strong>precio</strong>: Precio de venta en CLP (requerido)</li>
+              <li>• <strong>idServicioAPI</strong>: ID del servicio en la API del proveedor (requerido)</li>
+              <li>• <strong>idSubcategoria</strong>: ID de la subcategoría (opcional, dejar vacío si no aplica)</li>
+              <li>• <strong>idProveedor</strong>: ID del proveedor (opcional, usa el primero por defecto)</li>
+            </ul>
+          </div>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -859,13 +921,21 @@ function BulkCreateModal({ onClose, onCreate }: any) {
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
               className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500 font-mono text-sm"
-              rows={15}
-              placeholder="1000|5990|123|1|1&#10;2000|9990|124|1|1&#10;5000|19990|125|1|1"
+              rows={12}
+              placeholder="Instagram Followers 1K|1000|5990|1452|1|1&#10;Instagram Likes 5K|5000|9990|1453|1|1&#10;2000|4990|1454|2|1"
               required
             />
-            <p className="text-xs text-gray-500 mt-2">
-              Ejemplo: <code>1000|5990|123|1|1</code> crea un servicio de 1000 unidades a $5990
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-gray-400">
+                <strong>Ejemplos:</strong>
+              </p>
+              <p className="text-xs text-gray-500">
+                • <code className="bg-dark-700 px-1 rounded">Instagram Followers 1K|1000|5990|1452|1|1</code>
+              </p>
+              <p className="text-xs text-gray-500">
+                • <code className="bg-dark-700 px-1 rounded">5000|9990|1453||1</code> (sin nombre ni subcategoría)
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center space-x-3 pt-4">

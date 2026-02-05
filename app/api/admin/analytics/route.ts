@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     }
 
     // Contar proveedores
-    const totalProviders = await prisma.provider.count({
+    const totalProviders = await prisma.apiProvider.count({
       where: { status: true }
     })
 

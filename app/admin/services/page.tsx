@@ -306,9 +306,9 @@ export default function ServicesPage() {
                       {service.quantity.toLocaleString()}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-white font-bold">${service.salePrice.toLocaleString()}</div>
+                      <div className="text-white font-bold">${service.salePrice.toLocaleString()} CLP</div>
                       <div className="text-xs text-gray-500">
-                        Costo: ${service.apiProviderPrice}
+                        Costo: ${Math.round(service.apiProviderPrice * 950).toLocaleString()} CLP
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -498,7 +498,21 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
     }
   }
 
-  const handleServiceSelect = (serviceId: string) => {
+  const handleServiceSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const serviceId = e.target.value
+    
+    if (!serviceId) {
+      setFormData({
+        ...formData,
+        apiServiceId: '',
+        apiProviderPrice: '',
+        name: '',
+        quantity: '',
+        salePrice: '',
+      })
+      return
+    }
+    
     const selectedService = providerServices.find(s => s.service === serviceId)
     
     if (selectedService) {
@@ -572,21 +586,17 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Costo Proveedor (USD)
+                Costo Proveedor (CLP)
               </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.apiProviderPrice}
-                onChange={(e) => setFormData({ ...formData, apiProviderPrice: e.target.value })}
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
-                required
-                readOnly={!!formData.apiServiceId}
-                placeholder="Se completa al seleccionar servicio"
-              />
+              <div className="w-full px-4 py-3 bg-dark-600 border border-dark-600 rounded-lg text-gray-300">
+                {formData.apiProviderPrice 
+                  ? `$${Math.round(parseFloat(formData.apiProviderPrice) * usdToClpRate).toLocaleString()}`
+                  : 'Se completa al seleccionar servicio'
+                }
+              </div>
               {formData.apiProviderPrice && (
                 <p className="text-xs text-gray-500 mt-1">
-                  ≈ ${Math.round(parseFloat(formData.apiProviderPrice) * usdToClpRate).toLocaleString()} CLP
+                  ${parseFloat(formData.apiProviderPrice).toFixed(2)} USD × ${usdToClpRate.toFixed(0)}
                 </p>
               )}
             </div>
@@ -663,41 +673,48 @@ function CreateServiceModal({ categories, subcategories, providers, onFetchSubca
               ) : (
                 <select
                   value={formData.apiServiceId}
-                  onChange={(e) => handleServiceSelect(e.target.value)}
+                  onChange={handleServiceSelect}
                   className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
                   required
                 >
                   <option value="">Selecciona un servicio</option>
-                  {providerServices.map((service: any) => (
-                    <option key={service.service} value={service.service}>
-                      ID: {service.service} - {service.name} (${service.rate} USD)
-                    </option>
-                  ))}
+                  {providerServices.map((service: any) => {
+                    const costCLP = Math.round(parseFloat(service.rate) * usdToClpRate)
+                    return (
+                      <option key={service.service} value={service.service}>
+                        ID: {service.service} - {service.name} (${costCLP.toLocaleString()} CLP)
+                      </option>
+                    )
+                  })}
                 </select>
               )}
               <p className="text-xs text-gray-500 mt-1">
-                {providerServices.length} servicios disponibles • Tasa: ${usdToClpRate.toFixed(0)} CLP/USD
+                {providerServices.length} servicios disponibles
               </p>
             </div>
           )}
 
           {formData.apiServiceId && (
             <div className="bg-dark-700 border border-dark-600 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">Información Calculada:</h3>
-              <div className="space-y-1 text-sm">
+              <h3 className="text-sm font-medium text-gray-300 mb-2">💡 Información Calculada:</h3>
+              <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Costo USD:</span>
-                  <span className="text-white">${formData.apiProviderPrice}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Costo CLP:</span>
-                  <span className="text-white">
-                    ${Math.round(parseFloat(formData.apiProviderPrice || '0') * usdToClpRate).toLocaleString()}
+                  <span className="text-gray-400">Costo Proveedor:</span>
+                  <span className="text-red-400 font-bold">
+                    ${Math.round(parseFloat(formData.apiProviderPrice || '0') * usdToClpRate).toLocaleString()} CLP
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Precio Sugerido (50% margen):</span>
-                  <span className="text-green-400">${parseInt(formData.salePrice || '0').toLocaleString()}</span>
+                  <span className="text-green-400 font-bold">
+                    ${parseInt(formData.salePrice || '0').toLocaleString()} CLP
+                  </span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-dark-600">
+                  <span className="text-gray-400">Ganancia estimada (sin comisión):</span>
+                  <span className="text-blue-400 font-bold">
+                    ${(parseInt(formData.salePrice || '0') - Math.round(parseFloat(formData.apiProviderPrice || '0') * usdToClpRate)).toLocaleString()} CLP
+                  </span>
                 </div>
               </div>
             </div>

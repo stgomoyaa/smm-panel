@@ -19,6 +19,7 @@ interface Service {
     name: string
   } | null
   provider?: {
+    id: number
     name: string
   }
 }

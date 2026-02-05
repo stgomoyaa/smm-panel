@@ -221,13 +221,20 @@ export default function ServicesPage() {
 
           // Actualizar cada servicio
           for (const service of providerServices) {
+            // Buscar el servicio en la API por el serviceId
             const apiService = apiServices.find((s: any) => String(s.service) === String(service.serviceId))
+            
+            console.log(`🔍 Servicio ${service.name} (${service.serviceId}):`, {
+              encontrado: !!apiService,
+              precioActual: service.apiProviderPrice,
+              precioAPI: apiService?.rate
+            })
             
             if (apiService && apiService.rate) {
               const newPrice = parseFloat(apiService.rate)
               
-              // Solo actualizar si cambió el precio
-              if (service.apiProviderPrice !== newPrice) {
+              // Actualizar si el precio es 0 o si cambió
+              if (service.apiProviderPrice === 0 || service.apiProviderPrice !== newPrice) {
                 const updateRes = await fetch(`/api/admin/services/${service.id}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
@@ -237,11 +244,15 @@ export default function ServicesPage() {
                 })
 
                 if (updateRes.ok) {
+                  console.log(`✅ Actualizado ${service.name}: $${service.apiProviderPrice} -> $${newPrice}`)
                   updatedCount++
                 } else {
+                  console.error(`❌ Error actualizando ${service.name}`)
                   errorCount++
                 }
               }
+            } else {
+              console.warn(`⚠️ No se encontró servicio ${service.serviceId} en API del proveedor`)
             }
           }
         } catch (error) {

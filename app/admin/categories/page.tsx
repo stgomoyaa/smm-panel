@@ -22,15 +22,24 @@ interface Subcategory {
   status: boolean
 }
 
+interface CategoryStats {
+  revenue: number
+  profit: number
+  orders: number
+}
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
+  const [categoryStats, setCategoryStats] = useState<{ [key: number]: CategoryStats }>({})
+  const [subcategoryStats, setSubcategoryStats] = useState<{ [key: number]: CategoryStats }>({})
   const [loading, setLoading] = useState(true)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false)
 
   useEffect(() => {
     fetchData()
+    fetchStats()
   }, [])
 
   const fetchData = async () => {
@@ -49,6 +58,19 @@ export default function CategoriesPage() {
       toast.error('Error al cargar datos')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/admin/categories/stats')
+      if (res.ok) {
+        const data = await res.json()
+        setCategoryStats(data.categories || {})
+        setSubcategoryStats(data.subcategories || {})
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error)
     }
   }
 
@@ -117,39 +139,69 @@ export default function CategoriesPage() {
           <table className="w-full">
             <thead className="bg-dark-700">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase">
                   Nombre
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase hidden md:table-cell">
                   Slug
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase hidden sm:table-cell">
                   Icon
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase">
+                  Órdenes
+                </th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase">
+                  Ingresos
+                </th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase hidden lg:table-cell">
+                  Ganancia
+                </th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase">
                   Estado
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-700">
-              {categories.map((category) => (
-                <tr key={category.id} className="hover:bg-dark-700 transition-colors">
-                  <td className="px-6 py-4 text-white">{category.name}</td>
-                  <td className="px-6 py-4 text-gray-300">{category.slug}</td>
-                  <td className="px-6 py-4 text-2xl">{category.icon}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        category.status
-                          ? 'bg-green-900 text-green-300'
-                          : 'bg-red-900 text-red-300'
-                      }`}
-                    >
-                      {category.status ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {categories.map((category) => {
+                const stats = categoryStats[category.id] || { revenue: 0, profit: 0, orders: 0 }
+                return (
+                  <tr key={category.id} className="hover:bg-dark-700 transition-colors">
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <div className="flex items-center">
+                        <span className="text-2xl mr-2 sm:hidden">{category.icon}</span>
+                        <span className="text-white font-medium text-sm md:text-base">{category.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-gray-300 text-sm hidden md:table-cell">{category.slug}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-2xl hidden sm:table-cell">{category.icon}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right">
+                      <span className="text-white font-semibold text-sm md:text-base">{stats.orders}</span>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right">
+                      <div className="text-white font-bold text-sm md:text-base">
+                        ${stats.revenue.toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right hidden lg:table-cell">
+                      <div className="text-green-400 font-bold text-sm md:text-base">
+                        ${stats.profit.toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          category.status
+                            ? 'bg-green-900 text-green-300'
+                            : 'bg-red-900 text-red-300'
+                        }`}
+                      >
+                        {category.status ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -172,16 +224,25 @@ export default function CategoriesPage() {
           <table className="w-full">
             <thead className="bg-dark-700">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase">
                   Nombre
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase hidden md:table-cell">
                   Slug
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase">
                   Categoría
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">
+                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase hidden sm:table-cell">
+                  Órdenes
+                </th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase">
+                  Ingresos
+                </th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-xs font-medium text-gray-400 uppercase hidden lg:table-cell">
+                  Ganancia
+                </th>
+                <th className="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-medium text-gray-400 uppercase hidden xl:table-cell">
                   Estado
                 </th>
               </tr>
@@ -189,12 +250,26 @@ export default function CategoriesPage() {
             <tbody className="divide-y divide-dark-700">
               {subcategories.map((sub) => {
                 const category = categories.find((c) => c.id === sub.categoryId)
+                const stats = subcategoryStats[sub.id] || { revenue: 0, profit: 0, orders: 0 }
                 return (
                   <tr key={sub.id} className="hover:bg-dark-700 transition-colors">
-                    <td className="px-6 py-4 text-white">{sub.name}</td>
-                    <td className="px-6 py-4 text-gray-300">{sub.slug}</td>
-                    <td className="px-6 py-4 text-gray-300">{category?.name || 'N/A'}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-white font-medium text-sm md:text-base">{sub.name}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-gray-300 text-sm hidden md:table-cell">{sub.slug}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-gray-300 text-sm">{category?.name || 'N/A'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right hidden sm:table-cell">
+                      <span className="text-white font-semibold text-sm md:text-base">{stats.orders}</span>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right">
+                      <div className="text-white font-bold text-sm md:text-base">
+                        ${stats.revenue.toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right hidden lg:table-cell">
+                      <div className="text-green-400 font-bold text-sm md:text-base">
+                        ${stats.profit.toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 hidden xl:table-cell">
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
                           sub.status

@@ -53,9 +53,9 @@ function SellerLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   const navItems = [
-    { href: '/seller', icon: FiHome, label: 'Registrar', shortLabel: 'Vender' },
-    { href: '/seller/orders', icon: FiShoppingBag, label: 'Mis Ventas', shortLabel: 'Ventas' },
-    { href: '/seller/stats', icon: FiTrendingUp, label: 'Mis Ganancias', shortLabel: 'Ganancias' },
+    { href: '/seller', icon: FiHome, label: 'Registrar', shortLabel: 'Vender', color: 'primary' },
+    { href: '/seller/orders', icon: FiShoppingBag, label: 'Mis Ventas', shortLabel: 'Ventas', color: 'blue' },
+    { href: '/seller/stats', icon: FiTrendingUp, label: 'Mis Ganancias', shortLabel: 'Ganancias', color: 'green' },
   ]
 
   return (
@@ -131,8 +131,8 @@ function SellerLayoutInner({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* Bottom Navigation - Mobile only */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-dark-800 border-t border-dark-700 z-50">
-          <div className="flex items-center justify-around px-2 py-3">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-dark-800/95 backdrop-blur-lg border-t border-dark-700 z-50 safe-area-inset-bottom">
+          <div className="flex items-center justify-around px-2 py-2 pb-safe">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href
@@ -140,26 +140,38 @@ function SellerLayoutInner({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center space-y-1 px-4 py-2 rounded-lg transition-all ${
+                  className={`relative flex flex-col items-center justify-center space-y-1 px-3 py-2 rounded-xl transition-all active:scale-95 min-w-[72px] ${
                     isActive
                       ? 'text-primary-400'
-                      : 'text-gray-400'
+                      : 'text-gray-400 active:bg-dark-700'
                   }`}
                 >
-                  <Icon className={`text-2xl ${isActive ? 'scale-110' : ''}`} />
-                  <span className="text-xs font-medium">{item.shortLabel}</span>
+                  <div className={`p-2 rounded-lg transition-all ${
+                    isActive 
+                      ? 'bg-primary-500/20 shadow-lg shadow-primary-500/30' 
+                      : ''
+                  }`}>
+                    <Icon className={`text-2xl transition-transform ${isActive ? 'scale-110' : ''}`} />
+                  </div>
+                  <span className={`text-xs font-semibold transition-all ${
+                    isActive ? 'text-primary-400' : 'text-gray-500'
+                  }`}>
+                    {item.shortLabel}
+                  </span>
                   {isActive && (
-                    <div className="absolute bottom-0 w-12 h-1 bg-primary-500 rounded-t-full" />
+                    <div className="absolute -top-px left-1/2 -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-primary-600 to-primary-400 rounded-b-full" />
                   )}
                 </Link>
               )
             })}
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
-              className="flex flex-col items-center justify-center space-y-1 px-4 py-2 rounded-lg text-gray-400"
+              className="flex flex-col items-center justify-center space-y-1 px-3 py-2 rounded-xl text-gray-400 active:bg-dark-700 active:scale-95 transition-all min-w-[72px]"
             >
-              <FiUser className="text-2xl" />
-              <span className="text-xs font-medium">Perfil</span>
+              <div className="p-2">
+                <FiUser className="text-2xl" />
+              </div>
+              <span className="text-xs font-semibold text-gray-500">Perfil</span>
             </button>
           </div>
         </nav>

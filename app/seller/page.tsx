@@ -310,7 +310,7 @@ export default function SellerPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Step 1: Categoría */}
-            <div className={`${currentStep !== 1 && 'hidden md:block'}`}>
+            <div className={`transition-all duration-300 ${currentStep !== 1 && 'hidden md:block'}`}>
               <label className="block text-sm font-medium text-gray-300 mb-3">
                 <span className="md:hidden text-primary-400 font-bold text-lg">Paso 1:</span> Red Social
               </label>
@@ -340,7 +340,7 @@ export default function SellerPage() {
 
             {/* Step 2: Subcategoría */}
             {selectedCat && (
-              <div className={`${currentStep !== 2 && 'hidden md:block'}`}>
+              <div className={`transition-all duration-300 ${currentStep !== 2 && 'hidden md:block'}`}>
                 <label className="block text-sm font-medium text-gray-300 mb-3">
                   <span className="md:hidden text-primary-400 font-bold text-lg">Paso 2:</span> Tipo de Servicio
                 </label>
@@ -369,7 +369,7 @@ export default function SellerPage() {
 
             {/* Step 3: Cantidad/Servicio */}
             {selectedSubcategory && services.length > 0 && (
-              <div className={`${currentStep !== 3 && 'hidden md:block'}`}>
+              <div className={`transition-all duration-300 ${currentStep !== 3 && 'hidden md:block'}`}>
                 <label className="block text-sm font-medium text-gray-300 mb-3">
                   <span className="md:hidden text-primary-400 font-bold text-lg">Paso 3:</span> Cantidad
                 </label>
@@ -458,7 +458,7 @@ export default function SellerPage() {
 
             {/* Step 4: Link */}
             {selectedService && (
-              <div className={`${currentStep !== 4 && 'hidden md:block'}`}>
+              <div className={`transition-all duration-300 ${currentStep !== 4 && 'hidden md:block'}`}>
                 <label className="block text-sm font-medium text-gray-300 mb-3">
                   <span className="md:hidden text-primary-400 font-bold text-lg">Paso 4:</span> Link o Usuario *
                 </label>
@@ -478,7 +478,7 @@ export default function SellerPage() {
 
             {/* Step 5: Datos opcionales y submit */}
             {link && (
-              <div className={`space-y-4 ${currentStep !== 5 && 'hidden md:block'}`}>
+              <div className={`space-y-4 transition-all duration-300 ${currentStep !== 5 && 'hidden md:block'}`}>
                 <div className="bg-dark-700 rounded-lg p-4 space-y-3">
                   <h3 className="text-sm font-medium text-gray-300">
                     <span className="md:hidden text-primary-400 font-bold text-lg">Paso 5:</span> Datos del Cliente (Opcional)
